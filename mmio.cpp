@@ -21,6 +21,7 @@
 * @endcode
 * @return
 **/
+/*
 bool read_file_using_memory_map()
 {
 	// current directory 를 구한다.
@@ -33,7 +34,7 @@ bool read_file_using_memory_map()
 		return false;
 	}
 
-	buf = (PWSTR)malloc(sizeof(WCHAR) * buflen);
+	buf = (PWSTR)malloc(sizeof(WCHAR)* buflen);
 	if (0 == GetCurrentDirectoryW(buflen, buf))
 	{
 		print("err ] GetCurrentDirectoryW() failed. gle = 0x%08x", GetLastError());
@@ -145,7 +146,7 @@ bool read_file_using_memory_map()
 	CloseHandle(file_handle);
 	return true;
 }
-
+*/
 
 /**
 * @brief
@@ -156,6 +157,7 @@ bool read_file_using_memory_map()
 * @endcode
 * @return
 **/
+
 bool create_very_big_file(_In_ const wchar_t* file_path, _In_ uint32_t size_in_mb)
 {
 	_ASSERTE(NULL != file_path);
@@ -185,7 +187,7 @@ bool create_very_big_file(_In_ const wchar_t* file_path, _In_ uint32_t size_in_m
 	LARGE_INTEGER file_size = { 0 };
 	//file_size.LowPart = 0;
 	//file_size.HighPart = 1;
-	file_size.QuadPart = (1024 * 1024) * size_in_mb;
+	file_size.QuadPart = (LONGLONG)(1024 * 1024) * size_in_mb;
 
 	if (!SetFilePointerEx(file_handle, file_size, NULL, FILE_BEGIN))
 	{
@@ -198,6 +200,7 @@ bool create_very_big_file(_In_ const wchar_t* file_path, _In_ uint32_t size_in_m
 	SetEndOfFile(file_handle);
 	CloseHandle(file_handle);
 	return true;
+
 }
 
 
@@ -220,6 +223,8 @@ bool create_very_big_file(_In_ const wchar_t* file_path, _In_ uint32_t size_in_m
 * @endcode
 * @return
 **/
+
+/*
 pmap_context open_map_context(_In_ const wchar_t* file_path)
 {
 	_ASSERTE(NULL != file_path);
@@ -314,7 +319,7 @@ pmap_context open_map_context(_In_ const wchar_t* file_path)
 
 	return ctx;
 }
-
+*/
 /**
 * @brief
 * @param
@@ -324,6 +329,8 @@ pmap_context open_map_context(_In_ const wchar_t* file_path)
 * @endcode
 * @return
 **/
+
+/*
 pmap_context create_map_context(_In_ const wchar_t* file_path, _In_ uint32_t file_size)
 {
 	_ASSERTE(NULL != file_path);
@@ -356,7 +363,35 @@ pmap_context create_map_context(_In_ const wchar_t* file_path, _In_ uint32_t fil
 			break;
 		}
 
-		ctx->size = file_size;
+		//
+		// MapViewOfFile() 함수의 dwFileOffsetLow 파라미터는 
+		// SYSTEM_INFO::dwAllocationGranularity 값의 배수이어야 한다.
+		// 
+		static DWORD AllocationGranularity = 0;
+		if (0 == AllocationGranularity)
+		{
+			SYSTEM_INFO si = { 0 };
+			GetSystemInfo(&si);
+			AllocationGranularity = si.dwAllocationGranularity;
+		}
+
+		IN LARGE_INTEGER Offset;
+		Offset.HighPart = 0;
+		Offset.LowPart = 0;
+
+		DWORD AdjustMask = AllocationGranularity - 1;
+		LARGE_INTEGER AdjustOffset = { 0 };
+		AdjustOffset.HighPart = Offset.HighPart;
+
+		// AllocationGranularity 이하의 값을 버림
+		// 
+		AdjustOffset.LowPart = (Offset.LowPart & ~AdjustMask);
+
+		// 버려진 값만큼 매핑할 사이즈를 증가
+		// 
+		DWORD BytesToMap = (Offset.LowPart & AdjustMask) + file_size;
+
+		ctx->size = BytesToMap;
 		ctx->map = CreateFileMapping(
 			ctx->handle,
 			NULL,
@@ -373,7 +408,7 @@ pmap_context create_map_context(_In_ const wchar_t* file_path, _In_ uint32_t fil
 
 		ctx->view = (PCHAR)MapViewOfFile(
 			ctx->map,
-			FILE_MAP_WRITE,
+			FILE_MAP_READ | FILE_MAP_WRITE,
 			0,
 			0,
 			ctx->size
@@ -399,7 +434,7 @@ pmap_context create_map_context(_In_ const wchar_t* file_path, _In_ uint32_t fil
 
 	return ctx;
 }
-
+*/
 /**
 * @brief
 * @param
@@ -409,6 +444,8 @@ pmap_context create_map_context(_In_ const wchar_t* file_path, _In_ uint32_t fil
 * @endcode
 * @return
 **/
+
+/*
 void close_map_context(_In_ pmap_context ctx)
 {
 	if (NULL != ctx)
@@ -419,7 +456,7 @@ void close_map_context(_In_ pmap_context ctx)
 		free(ctx);
 	}
 }
-
+*/
 
 /**
 * @brief
@@ -430,6 +467,7 @@ void close_map_context(_In_ pmap_context ctx)
 * @endcode
 * @return
 **/
+/*
 bool
 file_copy_using_memory_map(
 _In_ const wchar_t* src_file,
@@ -468,9 +506,12 @@ _In_ const wchar_t* dst_file
 		dst_ctx->view[i] = src_ctx->view[i];
 	}
 
+	close_map_context(src_ctx);
+	close_map_context(dst_ctx);
+
 	return true;
 }
-
+*/
 /**
 * @brief
 * @param
@@ -492,7 +533,7 @@ _In_ const wchar_t* dst_file
 
 	if (!is_file_existsW(src_file))
 	{
-		print("err ] no nnnnnnnnnnnnnnnnnnnsrc file = %ws", src_file);
+		print("err ] no src file = %ws", src_file);
 		return false;
 	}
 
@@ -505,7 +546,7 @@ _In_ const wchar_t* dst_file
 	HANDLE src_handle = CreateFileW(
 		src_file,
 		GENERIC_READ,
-		FILE_SHARE_READ,
+		NULL,
 		NULL,
 		OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL,
@@ -513,7 +554,7 @@ _In_ const wchar_t* dst_file
 		);
 	if (INVALID_HANDLE_VALUE == src_handle)
 	{
-		print("err ] CreateFile( %ws ) failed1111111. gle = %u", src_file, GetLastError());
+		print("err ] CreateFile( %ws ) failed. gle = %u", src_file, GetLastError());
 		return false;
 	}
 
@@ -529,7 +570,7 @@ _In_ const wchar_t* dst_file
 		);
 	if (INVALID_HANDLE_VALUE == dst_handle)
 	{
-		print("err ] CreateFile( %ws ) failed22222222. gle = %u", dst_file, GetLastError());
+		print("err ] CreateFile( %ws ) failed. gle = %u", dst_file, GetLastError());
 
 		CloseHandle(src_handle);
 		return false;
@@ -563,7 +604,7 @@ _In_ const wchar_t* dst_file
 		// write to dst
 		if (!WriteFile(dst_handle, buf, sizeof(buf), &bytes_written, NULL))
 		{
-			print("err ] WriteFile( dst_handle ) failed. gle = %u", GetLastError());
+			print("err ] WriteFile11( dst_handle ) failed. gle = %u", GetLastError());
 			break;
 		}
 	} while (true);

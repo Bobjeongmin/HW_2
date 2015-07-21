@@ -136,7 +136,7 @@ IN LARGE_INTEGER FileSize
 	DTSTATUS status = DTS_WINAPI_FAILED;
 	do
 	{
-		//mFileSize = FileSize;
+		mFileSize = FileSize;
 
 		mFileHandle = CreateFileW(
 			FilePath.c_str(),
